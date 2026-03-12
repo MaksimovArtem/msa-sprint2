@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  booking-service:
+    build:
+      context: ../booking-service
+      dockerfile: Dockerfile
+    container_name: booking-service
+    ports:
+      - "9090:9090"
+    environment:
+      DB_HOST: booking-db
+      KAFKA_BROKER: kafka:9092
+    networks:
+      - hotelio-net
+
+  booking-db:
+    image: postgres:15
+    container_name: booking-db
+    environment:
+      POSTGRES_USER: hotelio
+      POSTGRES_PASSWORD: hotelio
+      POSTGRES_DB: hotelio
+    ports:
+      - "5433:5432"
+    volumes:
+      - booking-db-data:/var/lib/postgresql/data
+    networks:
+      - hotelio-net
+
+volumes:
+  booking-db-data:
+
+networks:
+  hotelio-net:
+    external: true
