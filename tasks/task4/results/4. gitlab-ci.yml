@@ -1,0 +1,77 @@
+stages:
+  - build
+  - test
+  - deploy
+  - tag
+
+variables:
+  IMAGE_NAME: booking-service
+  IMAGE_TAG: latest
+  RELEASE_NAME: booking-service
+  VALUES_FILE: "helm/booking-service/values-staging.yaml"
+
+build:
+  stage: build
+  script:
+    - cd booking-service
+    - docker build -t "$IMAGE_NAME:$IMAGE_TAG" .
+
+test:
+  stage: test
+  script:
+    # Тест без флага
+    - docker run -d --name booking-test "$IMAGE_NAME:$IMAGE_TAG"
+    - |
+      for i in $(seq 1 30); do
+        out=$(docker exec booking-test curl -fsS http://localhost:8080/ping 2>/dev/null || true)
+        [ -n "$out" ] && break
+        sleep 1
+      done
+      echo "curl /ping (flag off): $out"
+      test "$out" = "pong"
+    - docker rm -f booking-test
+
+    # Тест с флагом
+    - docker run -d --name booking-test-feature -e ENABLE_FEATURE_X=true "$IMAGE_NAME:$IMAGE_TAG"
+    - |
+      for i in $(seq 1 30); do
+        out=$(docker exec booking-test-feature curl -fsS http://localhost:8080/ping 2>/dev/null || true)
+        [ -n "$out" ] && break
+        sleep 1
+      done
+      echo "curl /ping (flag on): $out"
+      test "$out" = "pong-feature"
+    - docker rm -f booking-test-feature
+
+deploy:
+  stage: deploy
+  script:
+    - EXPECTED_PING="${EXPECTED_PING:-pong-feature}"
+
+    - minikube status >/dev/null 2>&1 || minikube start --driver=docker
+    - minikube image load "$IMAGE_NAME:$IMAGE_TAG"
+    - |
+      helm upgrade --install "$RELEASE_NAME" helm/booking-service \
+        -f "$VALUES_FILE" \
+        --set image.name="$IMAGE_NAME" \
+        --set image.tag="$IMAGE_TAG" \
+        --set image.pullPolicy=Never
+    - kubectl rollout status "deployment/$RELEASE_NAME" --timeout=120s
+
+    # Проверка DNS (check-dns.sh)
+    - |
+      dns_log="$(./check-dns.sh 2>/dev/null || true)"
+      echo "$dns_log"
+      out="$(printf '%s\n' "$dns_log" | grep -oE 'pong(-feature)?' | head -n1)"
+      echo "check-dns result: $out"
+      test "$out" = "$EXPECTED_PING"
+
+tag:
+  stage: tag
+  script:
+    - |
+      ts=$(date -u +%Y%m%d%H%M%S)
+      tag="booking-service-${ts}"
+      git tag -a "$tag" -m "timestamp tag ${ts}"
+      echo "Created tag: $tag"
+      echo "To push: git push origin \"$tag\""
