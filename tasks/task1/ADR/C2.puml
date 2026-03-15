@@ -1,0 +1,68 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+Person(user, "Пользователь", "Взаимодействует с системой")
+
+System_Boundary(hotelio, "Hotelio Platform") {
+
+    Boundary(frontend, "Frontend") {
+        Container(web, "Web-приложение", "", "Интерфейс пользователя")
+        Container(mobile, "Мобильное приложение", "", "Интерфейс пользователя")
+    }
+
+    Container(api_gateway, "API Gateway", "NGINX / Spring Cloud Gateway", "Точка входа в систему")
+
+    System_Boundary(bookings, "Работа с букингом") {
+        Container(booking_service, "Сервис бронирования", "Java Spring Boot", "Управляет бронированием")
+        ContainerDb(booking_db, "БД бронирования", "PostgreSQL", "Данные бронирования")
+    }
+
+    System_Boundary(hotels, "Работа с отелями") {
+        Container(hotel_service, "Сервис работы с отелями", "Java Spring Boot", "Управляет информацией об отелях")
+        ContainerDb(hotel_db, "БД отелей", "PostgreSQL", "Данные об отелях")
+    }
+
+    System_Boundary(promos, "Работа с промокодами") {
+        Container(promo_service, "Сервис работы с промокодами", "Java Spring Boot", "Управляет информацией о промокодах")
+        ContainerDb(promo_db, "БД промокодов", "PostgreSQL", "Данные о промокодах")
+    }
+
+    System_Boundary(reviews, "Работа с отзывами") {
+        Container(review_service, "Сервис работы с отзывами", "Java Spring Boot", "Управляет информацией об отзывах")
+        ContainerDb(review_db, "БД отзывов", "PostgreSQL", "Данные об отзывах")
+    }
+
+    System_Boundary(users, "Работа с пользователями") {
+        Container(user_service, "Сервис работы с пользователями", "Java Spring Boot", "Управляет информацией о пользователях")
+        ContainerDb(user_db, "БД пользователей", "PostgreSQL", "Данные о пользователях")
+    }
+
+    Container(kafka, "Kafka", "Event Streaming Platform", "Брокер сообщений")
+}
+
+Rel(user, web, "Использует")
+Rel(user, mobile, "Использует")
+
+Rel(web, api_gateway, "Взаимодействует с системой", "HTTPS")
+Rel(mobile, api_gateway, "Взаимодействует с системой", "HTTPS")
+
+Rel(api_gateway, booking_service, "Запросы на бронирование", "HTTPS")
+Rel(api_gateway, hotel_service, "Запросы на изменение состояния отелей", "HTTP")
+Rel(api_gateway, user_service, "Запросы на изменение состояния пользователей", "HTTP")
+Rel(api_gateway, promo_service, "Запросы на изменение состояния промокодов", "HTTP")
+Rel(api_gateway, review_service, "Запросы на изменение состояния отзывов", "HTTP")
+
+Rel_L(booking_service, booking_db, "Обновляет состояние", "SQL")
+Rel_L(hotel_service, hotel_db, "Обновляет состояние", "SQL")
+Rel_L(user_service, user_db, "Обновляет состояние", "SQL")
+Rel_L(promo_service, promo_db, "Обновляет состояние", "SQL")
+Rel_L(review_service, review_db, "Обновляет состояние", "SQL")
+
+Rel(hotel_service, kafka, "Отправляет события об отеле")
+Rel(user_service, kafka, "Отправляет события о пользователе")
+Rel(promo_service, kafka, "Отправляет события о промокоде")
+Rel(review_service, kafka, "Отправляет события об отзыве")
+
+Rel(kafka, booking_service, "Получает события изменений")
+
+@enduml

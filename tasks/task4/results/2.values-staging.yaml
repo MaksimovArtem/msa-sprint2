@@ -32,4 +32,3 @@ readinessProbe:
   periodSeconds: 5
   timeoutSeconds: 1
   failureThreshold: 3
-

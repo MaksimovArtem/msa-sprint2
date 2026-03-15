@@ -1,0 +1,28 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: booking-feature-flag
+  namespace: istio-system
+spec:
+  workloadSelector:
+    labels:
+      istio: ingressgateway
+  configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        context: GATEWAY
+        routeConfiguration:
+          name: http.8080
+          vhost:
+            name: "*:80"
+      patch:
+        operation: INSERT_FIRST
+        value:
+          match:
+            prefix: /ping
+            headers:
+              - name: x-feature-enabled
+                stringMatch:
+                  exact: "true"
+          route:
+            cluster: outbound|80|v2|booking-service.default.svc.cluster.local

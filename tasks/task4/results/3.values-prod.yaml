@@ -1,9 +1,9 @@
-replicaCount: 1
+replicaCount: 2
 
 image:
   name: booking-service
-  tag: latest
-  pullPolicy: Never
+  tag: stable
+  pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
@@ -12,14 +12,14 @@ service:
 
 resources:
   enableFeatureX:
-    value: true
+    value: false
   k8s:
     requests:
-      cpu: 50m
-      memory: 64Mi
+      cpu: 250m
+      memory: 256Mi
     limits:
-      cpu: 200m
-      memory: 128Mi
+      cpu: 750m
+      memory: 512Mi
 
 livenessProbe:
   initialDelaySeconds: 5
@@ -32,4 +32,3 @@ readinessProbe:
   periodSeconds: 5
   timeoutSeconds: 1
   failureThreshold: 3
-
