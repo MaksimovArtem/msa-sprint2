@@ -8,19 +8,17 @@ import (
 )
 
 func main() {
-	enableFeatureX := os.Getenv("ENABLE_FEATURE_X") == "true"
+	enableFeatureXEnv := os.Getenv("ENABLE_FEATURE_X")
+	enableFeatureX := enableFeatureXEnv == "true"
+	log.Printf("ENABLE_FEATURE_X=%q enableFeatureX=%t", enableFeatureXEnv, enableFeatureX)
 
 	http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		if enableFeatureX {
+			fmt.Fprintf(w, "pong-feature")
+			return
+		}
 		fmt.Fprintf(w, "pong")
 	})
-
-	// TODO: Feature flag route
-	// if ENABLE_FEATURE_X=true, expose /feature
-	if enableFeatureX {
-		http.HandleFunc("/feature", func(w http.ResponseWriter, r *http.Request) {
-			fmt.Fprintf(w, "Feature X is enabled!")
-		})
-	}
 
 	log.Println("Server running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
